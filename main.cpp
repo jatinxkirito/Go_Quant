@@ -11,37 +11,23 @@ int main()
     // Perform authentication
    auto success = auth.authenticate();
 
-
+    
     if (!success.first) {
         std::cerr << "Authentication failed" << std::endl;
         return 1;
     }
 
+    
+    
+    auto api = std::make_shared<DeribitAPI>(success.second);//access token for the session
+   /*cout<< api->placeOrder("ETH-PERPETUAL","buy",5,0,"market") << endl;
+   cout<<api->placeOrder("ETH-PERPETUAL","sell", 5,0,"market")<<endl;*/
+   /*cout << api->placeOrder("ETH-PERPETUAL", "buy", 10, 2600) << endl;*/
+   /*cout << api->modifyOrder("ETH-14472452183", 2621, 8) << endl;*/
+  /* cout << api->cancelOrder("ETH-14472452183");*/
+ 
+    OrderbookServer server(api);
+    server.run(9002);
+  
    
-    auto api = std::make_shared<DeribitAPI>(success.second);
-   cout<< api->placeOrder("BTC-PERPETUAL", "buy", 1.0, 50000.0)<<endl;
-   /* OrderbookServer server(api);
-    server.run(9002);*/
-    return 0;
 }
-//#define CURL_STATICLIB
-//#include <iostream>
-//#include "curl/curl.h"
-//using namespace std;
-//int main(int argc, char* argv[])
-//{
-//    CURL* req = curl_easy_init();
-//    CURLcode res;
-//    if (req)
-//    {
-//        curl_easy_setopt(req, CURLOPT_URL, "www.google.com");
-//        curl_easy_setopt(req, CURLOPT_FOLLOWLOCATION, 1L);
-//        res = curl_easy_perform(req);
-//        if (res != CURLE_OK)
-//        {
-//            fprintf(stderr, "curl_easy_operation() failed : %s\n", curl_easy_strerror(res));
-//        }
-//    }
-//    curl_easy_cleanup(req);
-//    return 0;
-//}

@@ -21,30 +21,40 @@ private:
     }
 
     std::string makeRequest(const std::string& endpoint, const std::string& params, const std::string& method = "GET") {
+        curl_easy_reset(curl);
+
         std::string url = base_url + endpoint;
         std::string response;
 
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+        // Set headers
         struct curl_slist* headers = NULL;
-        std::string str_token = "Authorization: Bearer " + access_token;
-        const char* token = str_token.c_str();
-        curl_slist_append(headers, token);
-        curl_slist_append(headers, "Content-Type: application/json");
+        std::string authHeader = "Authorization: Bearer " + access_token;
+        headers = curl_slist_append(headers, authHeader.c_str());
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        // Set method and parameters
         if (method == "POST") {
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, params.c_str());
         }
 
-
+        // Execute request
         CURLcode res = curl_easy_perform(curl);
+
+        // Free headers
         curl_slist_free_all(headers);
+
         if (res != CURLE_OK) {
             throw std::runtime_error("Failed to make request: " + std::string(curl_easy_strerror(res)));
         }
 
         return response;
+     
     }
 
 public:
@@ -81,8 +91,8 @@ public:
         // Convert to string
         Json::FastWriter writer;
         std::string request = writer.write(requestJson);
-        std::cout <<"Json request: "<< "\n";
-       std:: cout << request <<"\n";
+      /*  std::cout <<"Json request: "<< "\n";
+       std:: cout << request <<"\n";*/
 
         std::string response = makeRequest("", request, "POST");
 
@@ -94,10 +104,25 @@ public:
 
     // Cancel an existing order
     Json::Value cancelOrder(const std::string& order_id) {
-        std::string params = "order_id=" + order_id;
-        std::string response = makeRequest("private/cancel", params, "POST");
-
         Json::Value root;
+        root["jsonrpc"] = "2.0";
+        root["id"] = std::time(nullptr);   // Unique ID for the request
+        root["method"] = "private/cancel";
+
+        Json::Value params;
+        params["order_id"] = order_id;
+
+       
+
+        root["params"] = params;
+
+        // Convert JSON to string
+        Json::StreamWriterBuilder writer;
+        std::string jsonString = Json::writeString(writer, root);
+
+        std::string response = makeRequest("", jsonString, "POST");
+
+
         Json::Reader reader;
         reader.parse(response, root);
         return root;
@@ -105,13 +130,27 @@ public:
 
     // Modify an existing order
     Json::Value modifyOrder(const std::string& order_id, double new_price, double new_amount) {
-        std::string params = "order_id=" + order_id +
-            "&price=" + std::to_string(new_price) +
-            "&amount=" + std::to_string(new_amount);
-
-        std::string response = makeRequest("private/edit", params, "POST");
-
         Json::Value root;
+        root["jsonrpc"] = "2.0";
+        root["id"] = std::time(nullptr);   // Unique ID for the request
+        root["method"] = "private/edit";
+
+        Json::Value params;
+        params["order_id"] = order_id;
+
+        // Only add new amount and price if provided (i.e., non-zero)
+        if (new_amount > 0) params["amount"] = new_amount;
+        if (new_price > 0.0) params["price"] = new_price;
+
+        root["params"] = params;
+
+        // Convert JSON to string
+        Json::StreamWriterBuilder writer;
+        std::string jsonString = Json::writeString(writer, root);
+
+        std::string response = makeRequest("", jsonString, "POST");
+
+        
         Json::Reader reader;
         reader.parse(response, root);
         return root;
@@ -119,21 +158,53 @@ public:
 
     // Get orderbook for an instrument
     Json::Value getOrderbook(const std::string& instrument) {
-        std::string params = "instrument_name=" + instrument;
-        std::string response = makeRequest("public/get_order_book", params);
-
         Json::Value root;
+        root["jsonrpc"] = "2.0";
+        root["id"] = std::time(nullptr);   // Unique ID for the request
+        root["method"] = "public/get_order_book";
+
+        Json::Value params;
+        params["instrument_name"] = instrument;
+
+
+
+        root["params"] = params;
+
+        // Convert JSON to string
+        Json::StreamWriterBuilder writer;
+        std::string jsonString = Json::writeString(writer, root);
+
+        std::string response = makeRequest("", jsonString, "POST");
+
+
         Json::Reader reader;
         reader.parse(response, root);
         return root;
+       
     }
 
     // Get current positions
-    Json::Value getPositions(const std::string& currency) {
-        std::string params = "currency=" + currency;
-        std::string response = makeRequest("private/get_positions", params);
-
+    Json::Value getPositions(const std::string& currency, const std::string& kind = "") {
         Json::Value root;
+        root["jsonrpc"] = "2.0";
+        root["id"] = std::time(nullptr);  // Unique ID for the request
+        root["method"] = "private/get_positions";
+
+        Json::Value params;
+        params["currency"] = currency;
+        if (!kind.empty()) {
+            params["kind"] = kind;  // Optional: Set to "option" or "future" if needed
+        }
+        root["params"] = params;
+
+        // Convert JSON to string
+        Json::StreamWriterBuilder writer;
+        std::string jsonString = Json::writeString(writer, root);
+
+        // Call makeRequest with the specified endpoint and JSON payload
+        std::string response = makeRequest("", jsonString, "POST");
+
+        
         Json::Reader reader;
         reader.parse(response, root);
         return root;

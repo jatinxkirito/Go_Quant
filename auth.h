@@ -23,6 +23,7 @@ public:
         : apiUrl("https://test.deribit.com/api/v2/public/auth"),
         clientId(id),
         clientSecret(secret) {
+       
         // Initialize CURL
         curl_global_init(CURL_GLOBAL_ALL);
         curl = curl_easy_init();
@@ -51,6 +52,7 @@ public:
         params["grant_type"] = "client_credentials";
         params["client_id"] = clientId;
         params["client_secret"] = clientSecret;
+       /* params["scope"]= "sco "connection mainaccount"*/
         root["params"] = params;
 
         // Convert JSON to string
@@ -99,10 +101,12 @@ public:
                 std::cerr << "API Error: " << jsonResponse["error"].toStyledString() << std::endl;
                 return { false,"Failed" };;
             }
-
+           /* std::string s = jsonResponse["result"]["access_token"].asString();
+            std::cout << s << std::endl;*/
+           
             // Print successful response
-            std::cout << "Access token: " << jsonResponse["result"]["access_token"] << std::endl;
-            return {true,jsonResponse["result"]["access_token"].toStyledString()};
+           
+            return {true,jsonResponse["result"]["access_token"].asString()};
 
         }
         catch (const std::exception& e) {
